@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Card Catalog — Bookmarks v1.2</title>
+<title>Card Catalog — Bookmarks v1.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -154,6 +154,7 @@
     flex-direction:column;
     border-top:3px solid var(--sage);
     animation:deal .35s ease both;
+    cursor:pointer;
   }
   @keyframes deal{
     from{opacity:0; transform:translateY(6px) scale(.98);}
@@ -324,6 +325,39 @@
 
   @media (prefers-reduced-motion: reduce){
     .card{animation:none;}
+  }
+
+  /* ---------- LLM prompt helper ---------- */
+  .llm-help{
+    margin-top:34px;
+    background:rgba(239,230,211,.06);
+    border:1px dashed #3f5c50;
+    border-radius:4px;
+    padding:14px 18px;
+    color:var(--parchment);
+  }
+  .llm-help summary{
+    cursor:pointer;
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    font-weight:600;
+    color:var(--parchment);
+    outline:none;
+  }
+  .llm-help[open] summary{margin-bottom:4px;}
+  .prompt-block{
+    background:#0f2118;
+    color:#d8e6dc;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    line-height:1.55;
+    padding:14px;
+    border-radius:3px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    max-height:260px;
+    overflow-y:auto;
+    border:1px solid #2a4b3c;
   }
 </style>
 </head>
@@ -590,6 +624,12 @@ Here are the links to convert:
       row.appendChild(actions);
 
       card.appendChild(row);
+
+      card.addEventListener('click', (e) => {
+        if(e.target.closest('.actions') || e.target.closest('a.url')) return;
+        window.open(b.url, '_blank', 'noopener,noreferrer');
+      });
+
       catalogEl.appendChild(card);
     });
   }
@@ -719,6 +759,17 @@ Here are the links to convert:
     const file = e.target.files[0];
     importJSON(file);
     e.target.value = '';
+  });
+  document.getElementById('copyPromptBtn').addEventListener('click', async () => {
+    const text = document.getElementById('llmPrompt').textContent;
+    const btn = document.getElementById('copyPromptBtn');
+    try{
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied!';
+    }catch(e){
+      btn.textContent = 'Copy failed — select manually';
+    }
+    setTimeout(() => { btn.textContent = 'Copy prompt'; }, 1800);
   });
   overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
   searchInput.addEventListener('input', (e) => { searchTerm = e.target.value; render(); });
