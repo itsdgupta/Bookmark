@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Catalog — Bookmarks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wood:#1b3a2f;
+    --wood-dark:#122720;
+    --parchment:#efe6d3;
+    --parchment-dark:#e2d5b8;
+    --ink:#2a2622;
+    --ink-soft:#5b544a;
+    --rust:#b5651d;
+    --sage:#7c9885;
+    --card-shadow: 0 1px 0 rgba(0,0,0,.06), 0 6px 14px rgba(0,0,0,.10);
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top, #234a3c 0%, var(--wood) 45%, var(--wood-dark) 100%);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  /* ---------- Header ---------- */
+  header{
+    text-align:center;
+    margin-bottom:28px;
+    color:var(--parchment);
+  }
+  header .eyebrow{
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    font-size:11px;
+    color:var(--sage);
+    margin-bottom:6px;
+  }
+  header h1{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size:clamp(32px,5vw,52px);
+    margin:0;
+    letter-spacing:.01em;
+  }
+  header p.sub{
+    margin:8px 0 0;
+    font-size:13px;
+    color:#c9d6cd;
+  }
+
+  /* ---------- Drawer tabs (categories) ---------- */
+  .drawer-rail{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin:0 0 18px;
+  }
+  .tab{
+    background:var(--parchment-dark);
+    border:1px solid #cbb98f;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:7px 14px;
+    border-radius:2px 2px 6px 6px;
+    cursor:pointer;
+    letter-spacing:.03em;
+    transition:transform .12s ease, background .15s ease;
+  }
+  .tab:hover{transform:translateY(-2px);}
+  .tab.active{
+    background:var(--rust);
+    color:#fff8ec;
+    border-color:var(--rust);
+  }
+
+  /* ---------- Search / toolbar ---------- */
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:26px;
+  }
+  .search-box{
+    position:relative;
+    flex:1 1 320px;
+    max-width:420px;
+  }
+  .search-box input{
+    width:100%;
+    padding:11px 14px 11px 34px;
+    border-radius:2px;
+    border:1px solid #3f5c50;
+    background:#e9ded0;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    outline:none;
+  }
+  .search-box input:focus{border-color:var(--rust); box-shadow:0 0 0 2px rgba(181,101,29,.25);}
+  .search-box::before{
+    content:"⌕";
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    color:var(--ink-soft); font-size:15px;
+  }
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    font-weight:500;
+    padding:11px 18px;
+    border-radius:2px;
+    border:1px solid var(--rust);
+    background:var(--rust);
+    color:#fff8ec;
+    cursor:pointer;
+    letter-spacing:.02em;
+    transition:filter .12s ease;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn.ghost{
+    background:transparent;
+    color:var(--parchment);
+    border-color:#3f5c50;
+  }
+  .btn.ghost:hover{border-color:var(--sage);}
+
+  /* ---------- Card grid ---------- */
+  .catalog{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px,1fr));
+    gap:18px;
+  }
+  .card{
+    background:var(--parchment);
+    border-radius:var(--radius);
+    box-shadow:var(--card-shadow);
+    padding:16px 16px 14px;
+    position:relative;
+    min-height:150px;
+    display:flex;
+    flex-direction:column;
+    border-top:3px solid var(--sage);
+    animation:deal .35s ease both;
+  }
+  @keyframes deal{
+    from{opacity:0; transform:translateY(6px) scale(.98);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  .card::before{ /* punch hole */
+    content:"";
+    position:absolute;
+    top:10px; left:10px;
+    width:9px; height:9px;
+    border-radius:50%;
+    background:var(--wood-dark);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.5);
+  }
+  .card .idx{
+    position:absolute;
+    top:9px; right:12px;
+    font-size:10px;
+    color:#a89a7c;
+    letter-spacing:.05em;
+  }
+  .card h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:17px;
+    margin:14px 0 4px 6px;
+    line-height:1.25;
+    color:var(--ink);
+    word-break:break-word;
+  }
+  .card a.url{
+    font-size:11px;
+    color:var(--ink-soft);
+    text-decoration:none;
+    border-bottom:1px dotted #b7a880;
+    margin:0 0 8px 6px;
+    display:inline-block;
+    word-break:break-all;
+    max-width:100%;
+  }
+  .card a.url:hover{color:var(--rust); border-color:var(--rust);}
+  .card .note{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:0 0 10px 6px;
+    flex:1;
+    line-height:1.45;
+  }
+  .card .tag{
+    align-self:flex-start;
+    margin:0 0 10px 6px;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    background:transparent;
+    border:1px solid var(--sage);
+    color:#3d5747;
+    padding:2px 8px;
+    border-radius:10px;
+  }
+  .card .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:auto;
+    padding-top:8px;
+    border-top:1px dashed #cabb95;
+  }
+  .card .stamp{
+    font-size:10px;
+    color:#a89a7c;
+    letter-spacing:.04em;
+  }
+  .card .actions button{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:13px;
+    color:var(--ink-soft);
+    padding:2px 5px;
+  }
+  .card .actions button:hover{color:var(--rust);}
+
+  /* ---------- Empty state ---------- */
+  .empty{
+    grid-column:1/-1;
+    text-align:center;
+    color:var(--parchment);
+    padding:50px 20px;
+    border:1px dashed #3f5c50;
+    border-radius:4px;
+  }
+  .empty .big{font-family:'Fraunces', serif; font-size:20px; margin-bottom:6px;}
+  .empty p{font-size:12px; color:#c9d6cd; margin:0;}
+
+  /* ---------- Modal (new card) ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(18,39,32,.6);
+    display:none;
+    align-items:center; justify-content:center;
+    padding:20px;
+    z-index:10;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--parchment);
+    width:100%; max-width:420px;
+    border-radius:4px;
+    padding:22px;
+    box-shadow:0 20px 50px rgba(0,0,0,.4);
+    border-top:4px solid var(--rust);
+  }
+  .modal h2{
+    font-family:'Fraunces', serif;
+    font-size:20px;
+    margin:0 0 4px;
+  }
+  .modal .hint{font-size:11px; color:var(--ink-soft); margin:0 0 16px;}
+  .field{margin-bottom:12px;}
+  .field label{
+    display:block;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .field input, .field textarea{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid #cabb95;
+    border-radius:2px;
+    background:#f7f1e2;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--ink);
+    outline:none;
+    resize:vertical;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--rust);}
+  .modal-actions{
+    display:flex; justify-content:flex-end; gap:8px; margin-top:16px;
+  }
+  .err{
+    color:#a3391b;
+    font-size:11px;
+    min-height:14px;
+    margin-top:-4px;
+    margin-bottom:8px;
+  }
+  .status{
+    text-align:center;
+    color:#c9d6cd;
+    font-size:11px;
+    margin-bottom:14px;
+    min-height:14px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .card{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Personal Archive</div>
+    <h1>The Card Catalog</h1>
+    <p class="sub">A filed collection of the links worth keeping.</p>
+  </header>
+
+  <div id="status" class="status"></div>
+
+  <div class="drawer-rail" id="drawerRail"></div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="search title, url, or note…" autocomplete="off">
+    </div>
+    <button class="btn" id="addBtn">+ File a bookmark</button>
+    <button class="btn ghost" id="exportBtn">Export JSON</button>
+    <button class="btn ghost" id="importBtn">Import JSON</button>
+    <input type="file" id="importInput" accept="application/json,.json" style="display:none;">
+  </div>
+
+  <div class="catalog" id="catalog"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">New index card</h2>
+    <p class="hint">Fill in the details. Only title and URL are required.</p>
+    <div class="field">
+      <label for="fTitle">Title</label>
+      <input type="text" id="fTitle" placeholder="e.g. MDN Web Docs">
+    </div>
+    <div class="field">
+      <label for="fUrl">URL</label>
+      <input type="text" id="fUrl" placeholder="https://example.com">
+    </div>
+    <div class="field">
+      <label for="fCategory">Category</label>
+      <input type="text" id="fCategory" placeholder="e.g. dev, research, reading">
+    </div>
+    <div class="field">
+      <label for="fNote">Note (optional)</label>
+      <textarea id="fNote" rows="2" placeholder="why this is worth keeping"></textarea>
+    </div>
+    <div class="err" id="formErr"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelBtn" style="color:var(--ink); border-color:#cabb95;">Cancel</button>
+      <button class="btn" id="saveBtn">File card</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'bookmarks:list';
+  let bookmarks = [];
+  let activeCategory = 'All';
+  let searchTerm = '';
+  let editingId = null;
+
+  const catalogEl = document.getElementById('catalog');
+  const railEl = document.getElementById('drawerRail');
+  const statusEl = document.getElementById('status');
+  const overlay = document.getElementById('overlay');
+  const searchInput = document.getElementById('searchInput');
+
+  function setStatus(msg, isErr){
+    statusEl.textContent = msg || '';
+    statusEl.style.color = isErr ? '#e0a37a' : '#c9d6cd';
+  }
+
+  function uid(){
+    return 'b_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+  }
+
+  function hostFromUrl(url){
+    try{
+      const u = new URL(url);
+      return u.hostname.replace(/^www\./,'');
+    }catch(e){ return url; }
+  }
+
+  function normalizeUrl(url){
+    if(!/^https?:\/\//i.test(url)) return 'https://' + url;
+    return url;
+  }
+
+  async function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      bookmarks = raw ? JSON.parse(raw) : [];
+    }catch(e){
+      bookmarks = [];
+      setStatus('Could not read saved bookmarks — starting fresh.', true);
+    }
+    render();
+  }
+
+  async function persist(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+    }catch(e){
+      setStatus('Storage error — changes may not be saved (storage may be full or blocked).', true);
+    }
+  }
+
+  function categories(){
+    const set = new Set(bookmarks.map(b => (b.category||'Uncategorized').trim() || 'Uncategorized'));
+    return ['All', ...Array.from(set).sort((a,b)=>a.localeCompare(b))];
+  }
+
+  function renderRail(){
+    const cats = categories();
+    railEl.innerHTML = '';
+    cats.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (cat === activeCategory ? ' active' : '');
+      btn.textContent = cat + (cat !== 'All' ? '' : '');
+      btn.addEventListener('click', () => { activeCategory = cat; render(); });
+      railEl.appendChild(btn);
+    });
+  }
+
+  function filtered(){
+    return bookmarks.filter(b => {
+      const cat = (b.category||'Uncategorized').trim() || 'Uncategorized';
+      const matchesCat = activeCategory === 'All' || cat === activeCategory;
+      const hay = (b.title + ' ' + b.url + ' ' + (b.note||'')).toLowerCase();
+      const matchesSearch = !searchTerm || hay.includes(searchTerm.toLowerCase());
+      return matchesCat && matchesSearch;
+    }).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  }
+
+  function render(){
+    renderRail();
+    const list = filtered();
+    catalogEl.innerHTML = '';
+
+    if(list.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.innerHTML = `<div class="big">No cards filed here</div><p>${bookmarks.length === 0 ? 'Add your first bookmark to start the catalog.' : 'Try a different drawer or search term.'}</p>`;
+      catalogEl.appendChild(empty);
+      return;
+    }
+
+    list.forEach((b, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = String(i+1).padStart(3,'0');
+      card.appendChild(idx);
+
+      const h3 = document.createElement('h3');
+      h3.textContent = b.title;
+      card.appendChild(h3);
+
+      const a = document.createElement('a');
+      a.className = 'url';
+      a.href = b.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = hostFromUrl(b.url);
+      card.appendChild(a);
+
+      if(b.note){
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.textContent = b.note;
+        card.appendChild(note);
+      }
+
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = (b.category||'Uncategorized').trim() || 'Uncategorized';
+      card.appendChild(tag);
+
+      const row = document.createElement('div');
+      row.className = 'row';
+      const stamp = document.createElement('span');
+      stamp.className = 'stamp';
+      stamp.textContent = b.createdAt ? new Date(b.createdAt).toLocaleDateString(undefined,{year:'2-digit',month:'short',day:'numeric'}) : '';
+      row.appendChild(stamp);
+
+      const actions = document.createElement('span');
+      actions.className = 'actions';
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '✎';
+      editBtn.title = 'Edit';
+      editBtn.addEventListener('click', () => openModal(b));
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '🗑';
+      delBtn.title = 'Remove';
+      delBtn.addEventListener('click', () => removeCard(b.id));
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      row.appendChild(actions);
+
+      card.appendChild(row);
+      catalogEl.appendChild(card);
+    });
+  }
+
+  function openModal(bookmark){
+    editingId = bookmark ? bookmark.id : null;
+    document.getElementById('modalTitle').textContent = bookmark ? 'Edit index card' : 'New index card';
+    document.getElementById('fTitle').value = bookmark ? bookmark.title : '';
+    document.getElementById('fUrl').value = bookmark ? bookmark.url : '';
+    document.getElementById('fCategory').value = bookmark ? bookmark.category : '';
+    document.getElementById('fNote').value = bookmark ? (bookmark.note||'') : '';
+    document.getElementById('formErr').textContent = '';
+    overlay.classList.add('open');
+    document.getElementById('fTitle').focus();
+  }
+
+  function closeModal(){
+    overlay.classList.remove('open');
+    editingId = null;
+  }
+
+  async function saveCard(){
+    const title = document.getElementById('fTitle').value.trim();
+    let url = document.getElementById('fUrl').value.trim();
+    const category = document.getElementById('fCategory').value.trim();
+    const note = document.getElementById('fNote').value.trim();
+    const errEl = document.getElementById('formErr');
+
+    if(!title || !url){
+      errEl.textContent = 'Title and URL are required.';
+      return;
+    }
+    url = normalizeUrl(url);
+    try{ new URL(url); }catch(e){
+      errEl.textContent = 'That URL doesn\'t look valid.';
+      return;
+    }
+
+    if(editingId){
+      const b = bookmarks.find(x => x.id === editingId);
+      if(b){ b.title=title; b.url=url; b.category=category; b.note=note; }
+    }else{
+      bookmarks.push({ id: uid(), title, url, category, note, createdAt: Date.now() });
+    }
+
+    closeModal();
+    render();
+    await persist();
+  }
+
+  async function removeCard(id){
+    bookmarks = bookmarks.filter(b => b.id !== id);
+    if(activeCategory !== 'All' && !bookmarks.some(b => (b.category||'Uncategorized').trim()||'Uncategorized' === activeCategory)){
+      activeCategory = 'All';
+    }
+    render();
+    await persist();
+  }
+
+  function exportJSON(){
+    const blob = new Blob([JSON.stringify(bookmarks, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bookmarks-export.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importJSON(file){
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      let incoming;
+      try{
+        incoming = JSON.parse(e.target.result);
+        if(!Array.isArray(incoming)) throw new Error('not an array');
+      }catch(err){
+        setStatus('Import failed — file is not valid bookmark JSON.', true);
+        return;
+      }
+
+      const existingUrls = new Set(bookmarks.map(b => b.url));
+      let added = 0, skipped = 0, invalid = 0;
+
+      incoming.forEach(item => {
+        if(!item || typeof item !== 'object' || !item.title || !item.url){
+          invalid++; return;
+        }
+        let url;
+        try{ url = normalizeUrl(String(item.url).trim()); new URL(url); }
+        catch(err){ invalid++; return; }
+
+        if(existingUrls.has(url)){ skipped++; return; }
+
+        bookmarks.push({
+          id: uid(),
+          title: String(item.title).trim(),
+          url,
+          category: item.category ? String(item.category).trim() : '',
+          note: item.note ? String(item.note).trim() : '',
+          createdAt: item.createdAt && !isNaN(item.createdAt) ? item.createdAt : Date.now()
+        });
+        existingUrls.add(url);
+        added++;
+      });
+
+      render();
+      await persist();
+
+      const parts = [`${added} added`];
+      if(skipped) parts.push(`${skipped} duplicate${skipped===1?'':'s'} skipped`);
+      if(invalid) parts.push(`${invalid} invalid`);
+      setStatus(parts.join(' · '), invalid > 0 && added === 0);
+    };
+    reader.onerror = () => setStatus('Could not read that file.', true);
+    reader.readAsText(file);
+  }
+
+  document.getElementById('addBtn').addEventListener('click', () => openModal(null));
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  document.getElementById('saveBtn').addEventListener('click', saveCard);
+  document.getElementById('exportBtn').addEventListener('click', exportJSON);
+  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importInput').click());
+  document.getElementById('importInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    importJSON(file);
+    e.target.value = '';
+  });
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
+  searchInput.addEventListener('input', (e) => { searchTerm = e.target.value; render(); });
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+
+  load();
+})();
+</script>
+</body>
+</html>
