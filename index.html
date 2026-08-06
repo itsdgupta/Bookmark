@@ -202,9 +202,13 @@
     flex:1;
     line-height:1.45;
   }
-  .card .tag{
-    align-self:flex-start;
+  .card .tags-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
     margin:0 0 10px 6px;
+  }
+  .card .tag{
     font-size:10px;
     text-transform:uppercase;
     letter-spacing:.06em;
@@ -213,6 +217,11 @@
     color:#3d5747;
     padding:2px 8px;
     border-radius:10px;
+    white-space:nowrap;
+  }
+  .card .tag.empty{
+    border-style:dashed;
+    color:var(--ink-soft);
   }
   .card .row{
     display:flex;
@@ -342,6 +351,29 @@
   </div>
 
   <div class="catalog" id="catalog"></div>
+
+  <details class="llm-help">
+    <summary>Generate import JSON with an LLM ▾</summary>
+    <p class="hint" style="margin:10px 0;">Paste a list of your links (or just describe what you want bookmarked) after this prompt, feed the whole thing to any LLM, then import the JSON it returns using the button above.</p>
+    <pre id="llmPrompt" class="prompt-block">You are generating data for a bookmark manager. Output ONLY a raw JSON array (no markdown fences, no commentary) where each element has this exact shape:
+
+{
+  "title": "string, required, human-readable name of the page",
+  "url": "string, required, full URL including https://",
+  "tags": ["string", "string"],  // 0 or more short lowercase tags, no spaces inside a tag
+  "note": "string, optional, one short sentence on why it's worth keeping"
+}
+
+Rules:
+- Return a valid JSON array at the top level, e.g. [ {...}, {...} ]
+- Do not invent URLs you are not confident are real and correct
+- Keep "note" under 20 words or omit it
+- Keep tags short and reusable (e.g. "dev", "research", "reading") rather than one-off phrases
+
+Here are the links to convert:
+[paste your links or description here]</pre>
+    <button class="btn ghost" id="copyPromptBtn" style="margin-top:8px;">Copy prompt</button>
+  </details>
 </div>
 
 <div class="overlay" id="overlay">
@@ -357,7 +389,7 @@
       <input type="text" id="fUrl" placeholder="https://example.com">
     </div>
     <div class="field">
-      <label for="fCategory">Category</label>
+      <label for="fCategory">Tags (comma-separated)</label>
       <input type="text" id="fCategory" placeholder="e.g. dev, research, reading">
     </div>
     <div class="field">
@@ -407,6 +439,20 @@
     return url;
   }
 
+  // Splits "dev, research, reading" -> ["dev","research","reading"], deduped, empties dropped.
+  function parseTags(input){
+    if(Array.isArray(input)) input = input.join(',');
+    if(!input) return [];
+    const seen = new Set();
+    const out = [];
+    String(input).split(',').forEach(t => {
+      const clean = t.trim();
+      const key = clean.toLowerCase();
+      if(clean && !seen.has(key)){ seen.add(key); out.push(clean); }
+    });
+    return out;
+  }
+
   async function load(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -415,6 +461,12 @@
       bookmarks = [];
       setStatus('Could not read saved bookmarks — starting fresh.', true);
     }
+    // migrate old single-string "category" field to a "tags" array
+    bookmarks.forEach(b => {
+      if(!Array.isArray(b.tags)){
+        b.tags = parseTags(b.category || '');
+      }
+    });
     render();
   }
 
@@ -427,7 +479,11 @@
   }
 
   function categories(){
-    const set = new Set(bookmarks.map(b => (b.category||'Uncategorized').trim() || 'Uncategorized'));
+    const set = new Set();
+    bookmarks.forEach(b => {
+      const tags = (b.tags && b.tags.length) ? b.tags : ['Untagged'];
+      tags.forEach(t => set.add(t));
+    });
     return ['All', ...Array.from(set).sort((a,b)=>a.localeCompare(b))];
   }
 
@@ -445,9 +501,9 @@
 
   function filtered(){
     return bookmarks.filter(b => {
-      const cat = (b.category||'Uncategorized').trim() || 'Uncategorized';
-      const matchesCat = activeCategory === 'All' || cat === activeCategory;
-      const hay = (b.title + ' ' + b.url + ' ' + (b.note||'')).toLowerCase();
+      const tags = (b.tags && b.tags.length) ? b.tags : ['Untagged'];
+      const matchesCat = activeCategory === 'All' || tags.includes(activeCategory);
+      const hay = (b.title + ' ' + b.url + ' ' + (b.note||'') + ' ' + tags.join(' ')).toLowerCase();
       const matchesSearch = !searchTerm || hay.includes(searchTerm.toLowerCase());
       return matchesCat && matchesSearch;
     }).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
@@ -494,10 +550,23 @@
         card.appendChild(note);
       }
 
-      const tag = document.createElement('span');
-      tag.className = 'tag';
-      tag.textContent = (b.category||'Uncategorized').trim() || 'Uncategorized';
-      card.appendChild(tag);
+      const tagsRow = document.createElement('div');
+      tagsRow.className = 'tags-row';
+      const tags = (b.tags && b.tags.length) ? b.tags : [];
+      if(tags.length){
+        tags.forEach(t => {
+          const pill = document.createElement('span');
+          pill.className = 'tag';
+          pill.textContent = t;
+          tagsRow.appendChild(pill);
+        });
+      }else{
+        const pill = document.createElement('span');
+        pill.className = 'tag empty';
+        pill.textContent = 'untagged';
+        tagsRow.appendChild(pill);
+      }
+      card.appendChild(tagsRow);
 
       const row = document.createElement('div');
       row.className = 'row';
@@ -530,7 +599,7 @@
     document.getElementById('modalTitle').textContent = bookmark ? 'Edit index card' : 'New index card';
     document.getElementById('fTitle').value = bookmark ? bookmark.title : '';
     document.getElementById('fUrl').value = bookmark ? bookmark.url : '';
-    document.getElementById('fCategory').value = bookmark ? bookmark.category : '';
+    document.getElementById('fCategory').value = bookmark ? (bookmark.tags||[]).join(', ') : '';
     document.getElementById('fNote').value = bookmark ? (bookmark.note||'') : '';
     document.getElementById('formErr').textContent = '';
     overlay.classList.add('open');
@@ -545,7 +614,7 @@
   async function saveCard(){
     const title = document.getElementById('fTitle').value.trim();
     let url = document.getElementById('fUrl').value.trim();
-    const category = document.getElementById('fCategory').value.trim();
+    const tags = parseTags(document.getElementById('fCategory').value);
     const note = document.getElementById('fNote').value.trim();
     const errEl = document.getElementById('formErr');
 
@@ -561,9 +630,9 @@
 
     if(editingId){
       const b = bookmarks.find(x => x.id === editingId);
-      if(b){ b.title=title; b.url=url; b.category=category; b.note=note; }
+      if(b){ b.title=title; b.url=url; b.tags=tags; b.note=note; delete b.category; }
     }else{
-      bookmarks.push({ id: uid(), title, url, category, note, createdAt: Date.now() });
+      bookmarks.push({ id: uid(), title, url, tags, note, createdAt: Date.now() });
     }
 
     closeModal();
@@ -573,7 +642,7 @@
 
   async function removeCard(id){
     bookmarks = bookmarks.filter(b => b.id !== id);
-    if(activeCategory !== 'All' && !bookmarks.some(b => (b.category||'Uncategorized').trim()||'Uncategorized' === activeCategory)){
+    if(activeCategory !== 'All' && !bookmarks.some(b => ((b.tags && b.tags.length) ? b.tags : ['Untagged']).includes(activeCategory))){
       activeCategory = 'All';
     }
     render();
@@ -615,11 +684,13 @@
 
         if(existingUrls.has(url)){ skipped++; return; }
 
+        const tags = item.tags ? parseTags(item.tags) : parseTags(item.category || '');
+
         bookmarks.push({
           id: uid(),
           title: String(item.title).trim(),
           url,
-          category: item.category ? String(item.category).trim() : '',
+          tags,
           note: item.note ? String(item.note).trim() : '',
           createdAt: item.createdAt && !isNaN(item.createdAt) ? item.createdAt : Date.now()
         });
